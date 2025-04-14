@@ -1,0 +1,90 @@
+<h1>Abstract:</h1>
+<p>Quantum computing is rapidly advancing, offering revolutionary capabilities in solving complex computational problems. However, these advancements pose significant threats to classical cryptographic systems. This paper explores the relationship between quantum computing and modern encryption methods, focusing on how quantum algorithms compromise current standards and how post-quantum cryptographic strategies can provide resilience. A literature-based review is presented, alongside a critical discussion of near-future implications.</p>
+<p>Keywords: quantum computing, cryptography, Shor’s algorithm, post-quantum cryptography, cybersecurity, RSA</p>
+<h1>Main</h1>
+<h1>Introduction</h1>
+<h2>What Is Quantum Computing?</h2>
+<p>Quantum computing is a paradigm shift in information processing, leveraging principles of quantum mechanics—such as superposition and entanglement—to solve certain problems exponentially faster than classical computers. Unlike classical bits, which exist in a state of 0 or 1, quantum bits (qubits) can represent both states simultaneously, allowing massively parallel computation <a href="#ref-1">[1]</a>.</p>
+<p>As illustrated in Figure 1, a qubit differs fundamentally from a classical bit by existing in a state of superposition, enabling multiple computations to occur at once.</p>
+<img src="images/image-1.png" alt="Imagem 1" style="max-width:100%;"/>
+<p>Figure 1 – Visual Comparison of Classical Bit vs. Qubit Representation of how a classical bit holds a value of 0 or 1, whereas a qubit can be in both states simultaneously due to quantum superposition.</p>
+<h2>Why Does It Threaten Classical Cryptography?</h2>
+<p>Modern encryption schemes, including RSA and ECC, rely on the computational difficulty of factoring large integers and solving discrete logarithm problems. These mathematical problems are infeasible for classical computers to solve within a practical timeframe.</p>
+<p>Table 1 presents a comparison of some commonly used cryptographic algorithms, outlining their behavior under both classical and quantum attack models.</p>
+<p>Table 1 – Cryptographic Algorithm Security Comparison  Contrasting classical and post-quantum cryptographic algorithms in terms of their resistance to attacks and operational characteristics.</p>
+<p>However, with the introduction of Shor’s algorithm, quantum computers can factor large numbers and compute discrete logarithms in polynomial time, effectively breaking RSA and ECC <a href="#ref-2">[2]</a>. Moreover, Grover’s algorithm allows quantum machines to search unsorted databases quadratically faster than classical methods, weakening symmetric key systems such as AES by effectively halving their key strength <a href="#ref-3">[3]</a>.</p>
+<img src="images/image-2.png" alt="Imagem 2" style="max-width:100%;"/>
+<p></p>
+<h1>Discussion/Conclusions</h1>
+<h2>Real-World Impact of Quantum Attacks</h2>
+<p>If scalable quantum computers become practical, many widely used cryptographic systems will become insecure. For example, a 2048-bit RSA key, considered safe against classical attacks, could be broken within minutes using a large quantum computer running Shor’s algorithm <a href="#ref-2">[2]</a>. This would compromise:</p>
+<p>Secure internet communications (TLS/SSL)</p>
+<p>Encrypted email (PGP/GPG)</p>
+<p>Blockchain systems</p>
+<p>Digital signatures</p>
+<p>Another critical risk is the "harvest now, decrypt later" model, where encrypted data is stored today and decrypted in the future when quantum capabilities catch up. Sensitive data—medical, governmental, corporate—could thus be exposed retroactively <a href="#ref-4">[4]</a>.</p>
+<h2>The Urgency of Transition</h2>
+<p>Although fully functional quantum computers may still be several years away, the cryptographic community cannot afford to wait. The security of data depends on proactive preparation. Once encryption is broken, the confidentiality, integrity, and authenticity of data cannot be restored. Therefore, adopting quantum-resistant protocols must begin now as part of a global security strategy <a href="#ref-6">[6]</a>.</p>
+<h1>Methods</h1>
+<h2>Research Approach</h2>
+<p>This paper is based on a comprehensive literature review of academic publications, technical reports, and standards issued by major institutions such as NIST. The focus was on identifying the vulnerabilities of current cryptographic schemes under quantum attack models, evaluating post-quantum alternatives, and analyzing trends and projections from authoritative sources.</p>
+<p>In particular, the paper considers the structure and security assumptions of classical algorithms (e.g., RSA, ECC, AES), as well as proposed post-quantum candidates, with a view toward feasibility, security level, and implementation challenges.</p>
+<h2>Post-Quantum Cryptography (PQC)</h2>
+<h4>What Is PQC?</h4>
+<p>Post-Quantum Cryptography (PQC) refers to cryptographic algorithms designed to remain secure against attacks by both classical and quantum computers. Unlike RSA or ECC, PQC algorithms are built on mathematical problems not known to be efficiently solvable by quantum algorithms.</p>
+<p>Some major families include:</p>
+<p>Lattice-based cryptography</p>
+<p>Code-based cryptography</p>
+<p>Multivariate polynomial cryptography</p>
+<p>Hash-based cryptography</p>
+<p>These alternatives offer different trade-offs in performance, key size, and implementation complexity, but share the goal of long-term cryptographic security in a post-quantum world.</p>
+<h4>NIST’s Standardization Efforts</h4>
+<p>In 2016, the National Institute of Standards and Technology (NIST) launched a global effort to identify and standardize quantum-resistant cryptographic algorithms. By 2022, finalists such as CRYSTALS-Kyber (for key encapsulation) and CRYSTALS-Dilithium (for digital signatures) were selected for standardization due to their strong security and efficiency under quantum threat models <a href="#ref-5">[5]</a>.</p>
+<p>These efforts represent a coordinated global response, bringing together researchers, industry leaders, and governments to ensure a smooth and secure transition into the post-quantum era.</p>
+<h1>References</h1>
+<table border='1' style='border-collapse:collapse;'>
+<tr>
+<td>Algorithm</td>
+<td>Type</td>
+<td>Classical Security</td>
+<td>Quantum Security</td>
+<td>Efficiency</td>
+</tr>
+<tr>
+<td>RSA-2048</td>
+<td>Asymmetric</td>
+<td>High</td>
+<td>Weak (Shor’s algorithm)</td>
+<td>Moderate</td>
+</tr>
+<tr>
+<td>AES-256</td>
+<td>Symmetric</td>
+<td>High</td>
+<td>Reduced (Grover’s)</td>
+<td>High</td>
+</tr>
+<tr>
+<td>CRYSTALS-Kyber</td>
+<td>Post-Quantum</td>
+<td>High</td>
+<td>High</td>
+<td>High</td>
+</tr>
+<tr>
+<td>McEliece</td>
+<td>Post-Quantum</td>
+<td>High</td>
+<td>High</td>
+<td>Lower (due to key size)</td>
+</tr>
+</table>
+<br/>
+<ol>
+<li id="ref-1">Nielsen, M. A., & Chuang, I. L. (2010). Quantum Computation and Quantum Information. Cambridge University Press.</li>
+<li id="ref-2">Shor, P. W. (1994). Algorithms for quantum computation: discrete logarithms and factoring. Proceedings 35th Annual Symposium on Foundations of Computer Science, 124–134.</li>
+<li id="ref-3">Grover, L. K. (1996). A fast quantum mechanical algorithm for database search. Proceedings of the twenty-eighth annual ACM symposium on Theory of computing, 212–219.</li>
+<li id="ref-4">Mosca, M. (2018). Cybersecurity in an era with quantum computers: Will we be ready? IEEE Security & Privacy, 16(5), 38–41.</li>
+<li id="ref-5">National Institute of Standards and Technology (NIST). (2022). Post-Quantum Cryptography: NIST Round 3 Finalists.</li>
+<li id="ref-6">Chen, L., et al. (2016). Report on Post-Quantum Cryptography. National Institute of Standards and Technology.</li>
+</ol>
