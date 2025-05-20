@@ -166,7 +166,7 @@ class DocxProcessor:
                     raise Exception("Image upload failed")
                     
                 image_id = result['id']
-                self.image_map[self.image_index] = image_id
+                self.image_map[self.image_index] =  image_id
                 
                 # Add image tag using the correct path
                 self.html_output += (

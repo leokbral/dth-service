@@ -32,15 +32,24 @@ def test_convert_endpoint_with_valid_docx():
         print(f"File content length: {len(content)} bytes")
         files = {"file": ("test.docx", content, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
         
-        response = client.post("/api/convert", files=files)
-    
-    print(f"\nResponse status: {response.status_code}")
-    print(f"Response headers: {response.headers}")
-    print(f"Response content: {response.content}")
-    
-    assert response.status_code == 200
+        try:
+            response = client.post("/api/convert", files=files)
+            print(f"\nDebug - Response details:")
+            print(f"Status: {response.status_code}")
+            print(f"Headers: {response.headers}")
+            print(f"Content: {response.text}")  # Using .text instead of .content for readable output
+            
+            if response.status_code != 200:
+                error_detail = response.json().get('detail', 'No detail provided')
+                print(f"Error detail: {error_detail}")
+            
+        except Exception as e:
+            print(f"Request failed: {str(e)}")
+            raise
+        
+    assert response.status_code == 200, f"Conversion failed: {response.text}"
     result = response.json()
-    assert "html" in result
+    assert "html" in result, "Response missing 'html' field"
     
     html_content = result["html"]
     assert html_content, "HTML content should not be empty"

@@ -1,71 +1,87 @@
 # dth-service README.md
 
 # DTH Service
+Convert DOCX documents to HTML with image processing support.
 
-This project is a Python-based service designed to process `.docx` files and convert them into HTML format. It serves as a backend service for the Sciledger application, handling document processing requests.
+## Prerequisites
+- Python 3.10+
+- Windows OS
+- Git
 
-## Project Structure
+## Installation
 
-```
-dth-service
-├── src
-│   ├── api
-│   │   ├── __init__.py
-│   │   ├── routes.py
-│   │   └── handlers.py
-│   ├── core
-│   │   ├── __init__.py
-│   │   └── docx_processor.py
-│   ├── config
-│   │   ├── __init__.py
-│   │   └── settings.py
-│   └── main.py
-├── tests
-│   ├── __init__.py
-│   └── test_docx_processor.py
-├── requirements.txt
-├── Dockerfile
-└── README.md
+1. **Clone repository**
+```powershell
+git clone <repository-url>
+cd dth-service
 ```
 
-## Setup Instructions
+2. **Set up virtual environment**
+```powershell
+python -m venv venv
+.\venv\Scripts\activate
+```
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd dth-service
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Run the application:**
-   ```bash
-   uvicorn src.main:app --reload
-   ```
+3. **Install dependencies**
+```powershell
+pip install -r requirements.txt
+```
 
 ## Usage
 
-The DTH Service exposes an API that can be accessed by the Sciledger application. It accepts `.docx` files and returns the processed HTML output.
+### Start Server
+```powershell
+.\venv\Scripts\activate
+uvicorn src.main:app --reload
+```
+Service runs at:
+- API: `http://127.0.0.1:8000`
+- Docs: `http://127.0.0.1:8000/docs`
 
-## Testing
-
-To run the tests, use the following command:
-
-```bash
-pytest tests
+### Run Tests
+```powershell
+pytest tests\test_api.py -v        # Run all tests
+pytest tests\test_api.py -v -s     # With console output
 ```
 
-## Docker
+## API Endpoints
 
-To build and run the application in a Docker container, use the following commands:
+### Convert DOCX to HTML
+```http
+POST /api/convert
+Content-Type: multipart/form-data
 
-```bash
-docker build -t dth-service .
-docker run -p 8000:8000 dth-service
+file: document.docx
 ```
+
+Response:
+```json
+{
+  "html": "<converted html content>"
+}
+```
+
+## Project Structure
+```
+dth-service/
+├── src/
+│   ├── api/          # API routes
+│   ├── core/         # Business logic
+│   └── main.py      # Entry point
+├── tests/           # Test files
+└── requirements.txt # Dependencies
+```
+
+## Configuration
+- Sciledger URL: `http://localhost:5173` 
+- DTH Service port: `8000`
+
+## Dependencies
+- fastapi
+- python-docx
+- uvicorn
+- pytest
+- requests
 
 ## License
 
