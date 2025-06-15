@@ -136,26 +136,36 @@ class DocxProcessor:
 
             # Create multipart form data with correct structure
             files = {
-                'file': ('image.jpg', image_data, content_type)
+                'image': ('image.jpg', image_data, content_type)
             }
 
             # Add necessary headers
-            headers = {
-                'Accept': 'application/json',
-                'Origin': self.sciledger_url
-            }
-
-            url = f"{self.sciledger_url}/api/images/upload"
+            # headers = {
+            #     'Accept': 'application/json',
+            #     #'Origin': self.sciledger_url
+            #     'X-Requested-With': 'XMLHttpRequest',
+            #     'X-Internal-Request': 'true'
+            # }
             
+            headers = {
+                "Content-Type": "application/octet-stream",
+                "X-Filename": "image.jpg",
+                "X-Content-Type": "image/jpeg"
+}
+
+            url = f"{self.sciledger_url}/api/images/uploadraw"
+
             print(f"Sending request to: {url}")
             try:
                 response = requests.post(
                     url, 
-                    files=files,
+                    # files=files,
+                    data=image_data,
                     headers=headers
                 )
                 
                 print('Response:', response)
+                print('Response status code:', response.status_code)
                 print('Response content:', response.text)
                 
                 if response.status_code != 200:
