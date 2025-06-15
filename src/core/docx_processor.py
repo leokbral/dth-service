@@ -24,7 +24,7 @@ class DocxProcessor:
         self.ref_index = 1
         self.references_html = ""
         self.html_output = ""
-        self.sciledger_url = 'http://localhost:5173'
+        self.sciledger_url = 'https://scideep.imd.ufrn.br' #'http://localhost:5173'
         # sciledger_url
         self.paper_id = "tc"
         self.image_map: Dict[int, str] = {}  # maps image_index to MongoDB _id
