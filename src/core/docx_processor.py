@@ -5,6 +5,10 @@ import re
 from pathlib import Path
 import requests
 from typing import Dict
+from docx.oxml.table import CT_Tbl
+from docx.oxml.text.paragraph import CT_P
+from docx.table import _Cell, Table
+from docx.text.paragraph import Paragraph
 
 class DocxProcessor:
     def __init__(self):
@@ -46,13 +50,14 @@ class DocxProcessor:
             images_dir = Path(docx_path).parent / "images"
             images_dir.mkdir(exist_ok=True)
             
-            # Processar parágrafos
-            for para in doc.paragraphs:
-                self._process_paragraph(para)
-
-            # Processar tabelas
-            for table in doc.tables:
-                self._process_table(table)
+            # Processar elementos na ordem original do documento
+            for element in doc.element.body:
+                if isinstance(element, CT_P):  # Parágrafo
+                    para = Paragraph(element, doc)
+                    self._process_paragraph(para)
+                elif isinstance(element, CT_Tbl):  # Tabela
+                    table = Table(element, doc)
+                    self._process_table(table)
 
             # Fechar tags abertas
             if self.in_references:
