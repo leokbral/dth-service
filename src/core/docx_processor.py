@@ -1,5 +1,6 @@
 from docx import Document
 from docx.oxml.ns import qn
+import html
 import os
 import re
 from pathlib import Path
@@ -79,7 +80,7 @@ class DocxProcessor:
             return
 
         style = para.style.name
-        text = self._substituir_citacoes(raw_text)
+        text = self._substituir_citacoes(self._format_paragraph_runs(para).strip())
         is_list_style = style == "List Paragraph"
         is_bullet = re.match(self.bullet_regex, raw_text)
         is_numbered = re.match(self.numbered_regex, raw_text)
@@ -110,13 +111,51 @@ class DocxProcessor:
 
         # Processar listas
         if is_list_style or is_bullet or is_numbered:
-            self._process_list_item(text, is_bullet, is_numbered)
+            list_prefix_len = 0
+            if is_bullet:
+                list_prefix_len = len(is_bullet.group(0))
+            elif is_numbered:
+                list_prefix_len = len(is_numbered.group(0))
+
+            list_text = self._substituir_citacoes(
+                self._format_paragraph_runs(para, skip_chars=list_prefix_len).strip()
+            )
+            self._process_list_item(list_text, is_bullet, is_numbered)
         else:
             if self.in_list:
                 self.html_output += f"</{self.list_type}>\n"
                 self.in_list = False
                 self.list_type = None
             self.html_output += f"<p>{text}</p>\n"
+
+    def _format_paragraph_runs(self, para, skip_chars=0):
+        parts = []
+        remaining_skip = skip_chars
+
+        for run in para.runs:
+            run_text = run.text or ""
+            if not run_text:
+                continue
+
+            if remaining_skip >= len(run_text):
+                remaining_skip -= len(run_text)
+                continue
+
+            if remaining_skip > 0:
+                run_text = run_text[remaining_skip:]
+                remaining_skip = 0
+
+            segment = html.escape(run_text)
+            if run.bold:
+                segment = f"<strong>{segment}</strong>"
+            if run.italic:
+                segment = f"<em>{segment}</em>"
+            parts.append(segment)
+
+        if parts:
+            return "".join(parts)
+
+        return html.escape(para.text or "")
 
     def _process_table(self, table):
         self.html_output += "<table border='1' style='border-collapse:collapse;'>\n"
@@ -200,7 +239,6 @@ class DocxProcessor:
 
     def _process_list_item(self, text, is_bullet, is_numbered):
         new_list_type = "ul" if is_bullet else "ol" if is_numbered else "ul"
-        item_text = re.sub(self.bullet_regex if is_bullet else self.numbered_regex, '', text)
 
         if not self.in_list or new_list_type != self.list_type:
             if self.in_list:
@@ -209,4 +247,4 @@ class DocxProcessor:
             self.in_list = True
             self.list_type = new_list_type
 
-        self.html_output += f"<li>{item_text}</li>\n"
+        self.html_output += f"<li>{text}</li>\n"
