@@ -159,13 +159,70 @@ class DocxProcessor:
 
     def _process_table(self, table):
         self.html_output += "<table border='1' style='border-collapse:collapse;'>\n"
-        for row in table.rows:
+        rows = table._tbl.tr_lst
+        for row_idx, tr in enumerate(rows):
             self.html_output += "<tr>\n"
-            for cell in row.cells:
-                cell_text = self._substituir_citacoes(cell.text.strip()).replace("\n", "<br>")
-                self.html_output += f"<td>{cell_text}</td>\n"
+            col_idx = 0
+            for tc in tr.tc_lst:
+                col_span = self._get_col_span(tc)
+                v_merge = self._get_vmerge_type(tc)
+
+                if v_merge == "continue":
+                    col_idx += col_span
+                    continue
+
+                row_span = 1
+                if v_merge == "restart":
+                    row_span = self._count_vertical_span(rows, row_idx, col_idx)
+
+                cell = _Cell(tc, table)
+                cell_text = "\n".join(paragraph.text for paragraph in cell.paragraphs).strip()
+                cell_text = html.escape(cell_text)
+                cell_text = self._substituir_citacoes(cell_text).replace("\n", "<br>")
+
+                attrs = ""
+                if row_span > 1:
+                    attrs += f' rowspan="{row_span}"'
+                if col_span > 1:
+                    attrs += f' colspan="{col_span}"'
+
+                self.html_output += f"<td{attrs}>{cell_text}</td>\n"
+                col_idx += col_span
             self.html_output += "</tr>\n"
         self.html_output += "</table>\n<br/>\n"
+
+    def _get_col_span(self, tc):
+        tc_pr = tc.tcPr
+        if tc_pr is None or tc_pr.gridSpan is None:
+            return 1
+        return int(tc_pr.gridSpan.val)
+
+    def _get_vmerge_type(self, tc):
+        tc_pr = tc.tcPr
+        if tc_pr is None or tc_pr.vMerge is None:
+            return None
+        # In WordprocessingML, missing vMerge@val means continuation.
+        return tc_pr.vMerge.val or "continue"
+
+    def _find_tc_at_col(self, tr, target_col):
+        current_col = 0
+        for tc in tr.tc_lst:
+            span = self._get_col_span(tc)
+            if current_col == target_col:
+                return tc
+            current_col += span
+        return None
+
+    def _count_vertical_span(self, rows, row_idx, col_idx):
+        span = 1
+        for next_row in rows[row_idx + 1:]:
+            next_tc = self._find_tc_at_col(next_row, col_idx)
+            if next_tc is None:
+                break
+            if self._get_vmerge_type(next_tc) != "continue":
+                break
+            span += 1
+        return span
 
     def _salvar_imagens(self, run):
         drawing_elements = run._element.findall('.//{http://schemas.openxmlformats.org/drawingml/2006/main}blip')
