@@ -132,30 +132,81 @@ class DocxProcessor:
         parts = []
         remaining_skip = skip_chars
 
-        for run in para.runs:
-            run_text = run.text or ""
-            if not run_text:
+        for child in para._p:
+            if child.tag == qn("w:r"):
+                segment, remaining_skip = self._format_run_segment_from_element(child, remaining_skip)
+                if segment:
+                    parts.append(segment)
                 continue
 
-            if remaining_skip >= len(run_text):
-                remaining_skip -= len(run_text)
-                continue
+            if child.tag == qn("w:hyperlink"):
+                hyperlink_url = self._resolve_hyperlink_url(para, child)
+                hyperlink_parts = []
 
-            if remaining_skip > 0:
-                run_text = run_text[remaining_skip:]
-                remaining_skip = 0
+                for run_element in child.findall(qn("w:r")):
+                    segment, remaining_skip = self._format_run_segment_from_element(run_element, remaining_skip)
+                    if segment:
+                        hyperlink_parts.append(segment)
 
-            segment = html.escape(run_text)
-            if run.bold:
-                segment = f"<strong>{segment}</strong>"
-            if run.italic:
-                segment = f"<em>{segment}</em>"
-            parts.append(segment)
+                if hyperlink_parts:
+                    hyperlink_content = "".join(hyperlink_parts)
+                    if hyperlink_url:
+                        safe_url = html.escape(hyperlink_url, quote=True)
+                        parts.append(f'<a href="{safe_url}">{hyperlink_content}</a>')
+                    else:
+                        parts.append(hyperlink_content)
 
         if parts:
             return "".join(parts)
 
         return html.escape(para.text or "")
+
+    def _format_run_segment_from_element(self, run_element, remaining_skip=0):
+        run_text = "".join(t.text or "" for t in run_element.findall('.//' + qn("w:t")))
+        if not run_text:
+            return "", remaining_skip
+
+        if remaining_skip >= len(run_text):
+            return "", remaining_skip - len(run_text)
+
+        if remaining_skip > 0:
+            run_text = run_text[remaining_skip:]
+            remaining_skip = 0
+
+        segment = html.escape(run_text)
+        run_properties = run_element.find(qn("w:rPr"))
+        if self._is_toggle_enabled(run_properties, "w:b"):
+            segment = f"<strong>{segment}</strong>"
+        if self._is_toggle_enabled(run_properties, "w:i"):
+            segment = f"<em>{segment}</em>"
+
+        return segment, remaining_skip
+
+    def _is_toggle_enabled(self, run_properties, tag_name):
+        if run_properties is None:
+            return False
+
+        element = run_properties.find(qn(tag_name))
+        if element is None:
+            return False
+
+        val = element.get(qn("w:val"))
+        if val is None:
+            return True
+
+        return str(val).lower() not in {"0", "false", "off"}
+
+    def _resolve_hyperlink_url(self, para, hyperlink_element):
+        rel_id = hyperlink_element.get(qn("r:id"))
+        if rel_id and rel_id in para.part.rels:
+            relationship = para.part.rels[rel_id]
+            return getattr(relationship, "target_ref", None)
+
+        anchor = hyperlink_element.get(qn("w:anchor"))
+        if anchor:
+            return f"#{anchor}"
+
+        return None
 
     def _process_table(self, table):
         self.html_output += "<table border='1' style='border-collapse:collapse;'>\n"
