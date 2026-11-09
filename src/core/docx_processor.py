@@ -10,6 +10,7 @@ from docx.oxml.table import CT_Tbl
 from docx.oxml.text.paragraph import CT_P
 from docx.table import _Cell, Table
 from docx.text.paragraph import Paragraph
+from .equations import EquationConversionError, convert_equations
 
 class DocxProcessor:
     def __init__(self):
@@ -33,6 +34,7 @@ class DocxProcessor:
         # sciledger_url
         self.paper_id = "tc"
         self.image_map: Dict[int, str] = {}  # maps image_index to MongoDB _id
+        self.equations = {}
 
     def convert(self, docx_path):
         # Reset state
@@ -43,9 +45,12 @@ class DocxProcessor:
         self.in_references = False
         self.ref_index = 1
         self.references_html = ""
+        self.html_output = ""
+        self.equations = {}
         
         try:
             doc = Document(docx_path)
+            self.equations = convert_equations(doc)
             
             # Criar diretório de imagens
             images_dir = Path(docx_path).parent / "images"
@@ -67,6 +72,12 @@ class DocxProcessor:
             if self.in_list:
                 self.html_output += f"</{self.list_type}>\n"
 
+            rendered_equations = len(re.findall(r"<math\b", self.html_output))
+            if rendered_equations != len(self.equations):
+                raise EquationConversionError(
+                    "DTH could not place every equation in the converted document: "
+                    f"found {len(self.equations)}, placed {rendered_equations}."
+                )
             return self.html_output
             
 
@@ -76,7 +87,8 @@ class DocxProcessor:
 
     def _process_paragraph(self, para):
         raw_text = para.text.strip()
-        if not raw_text and not any('graphic' in run._element.xml for run in para.runs):
+        has_equations = next(para._p.iter(qn("m:oMath")), None) is not None
+        if not raw_text and not has_equations and not any('graphic' in run._element.xml for run in para.runs):
             return
 
         style = para.style.name
@@ -129,10 +141,21 @@ class DocxProcessor:
             self.html_output += f"<p>{text}</p>\n"
 
     def _format_paragraph_runs(self, para, skip_chars=0):
-        parts = []
-        remaining_skip = skip_chars
+        formatted, _ = self._format_inline_elements(para._p, para, skip_chars)
+        return formatted or html.escape(para.text or "")
 
-        for child in para._p:
+    def _format_inline_elements(self, elements, para, remaining_skip=0):
+        parts = []
+
+        for child in elements:
+            if child.tag == qn("m:oMath"):
+                parts.append(self.equations[child])
+                continue
+
+            if child.tag == qn("m:oMathPara"):
+                parts.extend(self.equations[equation] for equation in child.iter(qn("m:oMath")))
+                continue
+
             if child.tag == qn("w:r"):
                 segment, remaining_skip = self._format_run_segment_from_element(child, remaining_skip)
                 if segment:
@@ -141,25 +164,20 @@ class DocxProcessor:
 
             if child.tag == qn("w:hyperlink"):
                 hyperlink_url = self._resolve_hyperlink_url(para, child)
-                hyperlink_parts = []
-
-                for run_element in child.findall(qn("w:r")):
-                    segment, remaining_skip = self._format_run_segment_from_element(run_element, remaining_skip)
-                    if segment:
-                        hyperlink_parts.append(segment)
-
-                if hyperlink_parts:
-                    hyperlink_content = "".join(hyperlink_parts)
+                hyperlink_content, remaining_skip = self._format_inline_elements(child, para, remaining_skip)
+                if hyperlink_content:
                     if hyperlink_url:
                         safe_url = html.escape(hyperlink_url, quote=True)
                         parts.append(f'<a href="{safe_url}">{hyperlink_content}</a>')
                     else:
                         parts.append(hyperlink_content)
+                continue
 
-        if parts:
-            return "".join(parts)
+            if child.tag in {qn(tag) for tag in ("w:sdt", "w:sdtContent", "w:ins", "w:smartTag", "w:customXml")}:
+                segment, remaining_skip = self._format_inline_elements(child, para, remaining_skip)
+                parts.append(segment)
 
-        return html.escape(para.text or "")
+        return "".join(parts), remaining_skip
 
     def _format_run_segment_from_element(self, run_element, remaining_skip=0):
         run_text = "".join(t.text or "" for t in run_element.findall('.//' + qn("w:t")))
@@ -179,6 +197,12 @@ class DocxProcessor:
             segment = f"<strong>{segment}</strong>"
         if self._is_toggle_enabled(run_properties, "w:i"):
             segment = f"<em>{segment}</em>"
+        if run_properties is not None:
+            alignment = run_properties.find(qn("w:vertAlign"))
+            if alignment is not None:
+                script = {"superscript": "sup", "subscript": "sub"}.get(alignment.get(qn("w:val")))
+                if script:
+                    segment = f"<{script}>{segment}</{script}>"
 
         return segment, remaining_skip
 
@@ -227,9 +251,10 @@ class DocxProcessor:
                     row_span = self._count_vertical_span(rows, row_idx, col_idx)
 
                 cell = _Cell(tc, table)
-                cell_text = "\n".join(paragraph.text for paragraph in cell.paragraphs).strip()
-                cell_text = html.escape(cell_text)
-                cell_text = self._substituir_citacoes(cell_text).replace("\n", "<br>")
+                cell_text = "<br>".join(
+                    self._substituir_citacoes(self._format_paragraph_runs(paragraph))
+                    for paragraph in cell.paragraphs
+                ).strip()
 
                 attrs = ""
                 if row_span > 1:
@@ -343,7 +368,12 @@ class DocxProcessor:
                 raise Exception(f"Failed to upload image: {str(e)}")
 
     def _substituir_citacoes(self, texto):
-        return re.sub(r"\[(\d+)\]", r'<a href="#ref-\1">[\1]</a>', texto)
+        # A numeric subscript or TeX annotation such as [1] is not a citation.
+        segments = re.split(r"(<math\b[^>]*>.*?</math>)", texto, flags=re.DOTALL)
+        return "".join(
+            segment if index % 2 else re.sub(r"\[(\d+)\]", r'<a href="#ref-\1">[\1]</a>', segment)
+            for index, segment in enumerate(segments)
+        )
 
     def _process_list_item(self, text, is_bullet, is_numbered):
         new_list_type = "ul" if is_bullet else "ol" if is_numbered else "ul"

@@ -6,3 +6,4 @@ requests==2.31.0
 pydantic
 pytest
 fastapi-cors==0.0.6
+pypandoc_binary==1.17

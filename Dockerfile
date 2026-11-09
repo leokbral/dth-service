@@ -3,6 +3,10 @@ FROM python:3.9-slim
 # Set the working directory
 WORKDIR /app
 
+# Native Word equations (OMML) are converted to MathML inside DTH.
+RUN apt-get update && apt-get install -y --no-install-recommends pandoc \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy the requirements file
 COPY requirements.txt .
 
