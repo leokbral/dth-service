@@ -1,5 +1,6 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Query
 from ..core.docx_processor import DocxProcessor
+from ..core.equations import EquationConversionError, PandocUnavailableError
 import tempfile
 import os
 # const formData = new FormData();
@@ -42,8 +43,12 @@ async def convert_docx(
             print(f"Starting conversion of: {tmp_path}")
             html_content = processor.convert(tmp_path)
             print(f"Conversion completed. HTML length: {len(html_content)}")
-            return {"html": html_content}
+            return {"html": html_content, "equationCount": len(processor.equations)}
             
+        except PandocUnavailableError as conv_error:
+            raise HTTPException(status_code=503, detail=str(conv_error)) from conv_error
+        except EquationConversionError as conv_error:
+            raise HTTPException(status_code=422, detail=str(conv_error)) from conv_error
         except Exception as conv_error:
             print(f"Conversion error: {str(conv_error)}")
             print(f"Error type: {type(conv_error)}")
@@ -54,6 +59,8 @@ async def convert_docx(
                 os.unlink(tmp_path)
                 print(f"Temporary file removed: {tmp_path}")
                 
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Processing error: {str(e)}")
         print(f"Error type: {type(e)}")

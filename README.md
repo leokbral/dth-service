@@ -2,6 +2,38 @@
 
 **Status: In Development**
 
+## Native equations
+
+DTH converts native DOCX equations (Word OMML) to MathML in the returned HTML,
+including inline equations, display equations, fractions, roots, integrals,
+summations, matrices and equation arrays. Equations in table cells are retained.
+The API also returns `equationCount`. The MathML can be displayed directly in
+modern browsers and Chromium PDF exports; no external rendering service is used.
+
+Installing `requirements.txt` installs **pypandoc_binary**, which includes Pandoc
+and is detected automatically even when Pandoc is not on `PATH`. Existing
+`PANDOC_PATH` or system Pandoc installations take precedence. The Dockerfile also
+installs system Pandoc. Rebuild the DTH image to deploy this
+change. Pandoc is only invoked for files that contain native equations, once per
+document, with a 30-second timeout. Missing dependencies or incomplete equation
+conversion fail the request instead of returning an article with missing math.
+
+For Google Docs, export the article as `.docx`. Mathematical structure is retained
+only when that export contains native OMML equations. Images, legacy Equation
+Editor/OLE objects, direct Google Docs links and `.tex` files are not converted
+into editable mathematical structure by this endpoint.
+
+Run equation and table regression tests with Pandoc installed:
+
+```sh
+python -B -m pytest tests/test_equations.py tests/test_table_merges.py
+```
+
+When upgrading a service started directly with Python (without Docker), install
+the updated requirements using that service's virtual environment and restart
+the service. A missing Pandoc dependency returns HTTP 503; unconvertible native
+equations return HTTP 422 instead of being wrapped in an HTTP 400 response.
+
 A DOCX-to-HTML conversion service with image processing, developed as part of the SciLedger project.
 
 ## Technologies Used
